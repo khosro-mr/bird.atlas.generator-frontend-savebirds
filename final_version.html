@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bird Atlas Generator (BAG)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #f8fbff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
+      font-weight: bold;
+    }
+    h2 {
+      color: #2c3e50;
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border: 1px solid #e0e6ef;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -10px;
+    }
+    .col {
+      flex: 1;
+      padding: 0 10px;
+      min-width: 300px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #495057;
+    }
+    select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ced4da;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 10px 15px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .radio-group {
+      margin-bottom: 8px;
+    }
+    .radio-label {
+      display: inline;
+      margin-left: 5px;
+      font-weight: normal;
+    }
+    .map-container {
+      height: 400px;
+      background-color: #d6e6f5;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .map-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgNTAwIj48cGF0aCBkPSJNMCwwIEw4MDAsNTAwIEw4MDAsNTAwIEw4MDAsNTAwIEw4MDAsNTAwIEw4MDAsNTAwIEw4MDAsNTAwIFoiIGZpbGw9IiNkNmU2ZjUiPjwvcGF0aD48cGF0aCBkPSJNMjg2LDk4IEwyODYsMTI0IEwzMTIsMTI5IEwzMjksMTYyIEwzNjQsMTc1IEwzODQsMTk3IEw0MjYsMjA1IEw0NTYsMjI4IEw0NjksMjQ4IEw0OTksMjY3IEw1MzYsMjcwIEw1NTMsMjk1IEw1ODAsMzE1IEw1OTQsMzM1IEw2MjcsMzQ2IEw2NjIsMzUzIEw2ODksMzc3IEw3MjIsMzkzIFoiIGZpbGw9IiM4OGI3ZDUiIGZpbGwtb3BhY2l0eT0iMC42Ij48L3BhdGg+PHBhdGggZD0iTTQ0MSw0ODQgTDQ0MSw1MDAgTDQ1Niw1MDAgTDQ1Niw0OTQgWiIgZmlsbD0iIzg4YjdkNSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD48cGF0aCBkPSJNNzE1LDMwNiBMNzEwLDMyNiBMNzMzLDM0MCBMNzY0LDM1OCBMNzc4LDM4MiBMODAwLDQwNyBMODAwLDM5MyBMNzg3LDM3NCBMNzcxLDM1OCBMNzU0LDM0MSBMNzM0LDMyNiBaIiBmaWxsPSIjODhiN2Q1IiBmaWxsLW9wYWNpdHk9IjAuNiI+PC9wYXRoPjxwYXRoIGQ9Ik0wLDEzNSBMMCwxNTcgTDI0LDE2MiBMMzksMTg0IEw2MywxOTEgTDc3LDIxMSBMMTAxLDIyMCBMMTE5LDI0NiBMMTQ5LDI1OCBMMTY5LDI3OCBMMTkxLDI4NSBMMTE4LDI5OSBMNjMsMzE4IEwwLDM0MyBMMCwzNjUgTDQxLDM4MCBMNjcsMzk5IEw5Niw0MTEgTDEyNyw0MjkgTDE1Nyw0NDQgTDE4Myw0NjQgTDIxOSw0NzUgTDI0Niw0OTMgTDI2OSw1MDAgTDM3NSw1MDAgTDM4NSw0NjkgTDQxNCw0NjEgTDQzMyw0MzcgTDQ2Myw0MzAgTDQ4NSw0MDYgTDQ2OSw0MDEgTDQzOCwzOTMgTDQwOCwzNzEgTDM4MiwzNDggTDM1MywzMzQgTDMyOSwzMTMgTDMyNCwyOTIgTDI5NywyNzkgTDI2NywyNTYgTDI1MCwyMzcgTDIyNiwyMjIgTDIwNSwyMDMgTDE3NSwxOTQgTDE0NSwxODggTDEyMywxNjggTDk4LDE1OCBMODY3LDE0MSBMMzksMTQwIEwxNiwxMzkgWiIgZmlsbD0iIzg4YjdkNSIgZmlsbC1vcGFjaXR5PSIwLjYiPjwvcGF0aD48cGF0aCBkPSJNMCw1MDAgTDIwLDUwMCBMMjAsNDk0IEwwLDQ5MCBaIiBmaWxsPSIjODhiN2Q1IiBmaWxsLW9wYWNpdHk9IjAuNiI+PC9wYXRoPjwvc3ZnPg==');
+      background-size: cover;
+      opacity: 0.7;
+      border-radius: 4px;
+      z-index: 1;
+    }
+    .result-button {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .map-attribution {
+      position: absolute;
+      bottom: 5px;
+      right: 10px;
+      font-size: 11px;
+      color: #666;
+      z-index: 2;
+    }
+    .modules-diagram {
+      height: 300px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .module-node {
+      position: absolute;
+      padding: 10px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+      z-index: 2;
+    }
+    .primary-node {
+      background-color: #ffd166;
+    }
+    .secondary-node {
+      background-color: #8bd3dd;
+    }
+    .tertiary-node {
+      background-color: #b8e0d2;
+    }
+    .module-1 {
+      top: 50px;
+      left: 150px;
+      width: 120px;
+    }
+    .module-2 {
+      top: 50px;
+      right: 150px;
+      width: 120px;
+    }
+    .module-3 {
+      top: 150px;
+      left: 50px;
+      width: 100px;
+    }
+    .module-4 {
+      top: 150px;
+      right: 50px;
+      width: 100px;
+    }
+    .module-5 {
+      bottom: 50px;
+      left: 250px;
+      width: 150px;
+    }
+    .module-6 {
+      bottom: 100px;
+      right: 200px;
+      width: 100px;
+    }
+    .center-atlas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px;
+      background-color: #ffd166;
+      border-radius: 8px;
+      font-weight: bold;
+      z-index: 3;
+      border: 2px solid #e9b44c;
+    }
+    .text-center {
+      text-align: center;
+    }
+    @media (max-width: 768px) {
+      .col {
+        flex: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bird Atlas Generator (BAG)</h1>
+    
+    <div class="card">
+      <p>Here is the first publicly available comprehensive Bird Atlas Generator (BAG) based on the North American Breeding Bird Survey data. It has been developed at <i>in-situ</i> mediation for conservation practitioners and the bird-aware. BAG assists bird research communities with powerful tools for generating spatially and temporally explicit visualizations of bird population trends.</p>
+      <p>As input, SaveBirds receives the year interval and a map in shapefile (.shp) format. Then SaveBirds provides the user with a zip file that contains hundreds of CSV files, each related to one species, where each CSV contains the modeled species trend in the year interval across specified shapefile geometry defined areas. Currently BAG has only <i>geo-modeled</i> files that were related to the BCR regions of North America. This is why the default geographic area is BCR (Bird Conservation Region).</p>
+      <p>For each species, the BAG creates a Minimum Convex Polygon (MCP) for the routes in which the selected bird species has been seen in the year interval across North America. Then the BAG overlaps the MCP on a raster. By default, we make the cell size of the raster 25 miles x 25 miles for roughly corresponded to the route span of the BBS dataset (nearly 25 miles of roadway). In the overlap step, the BAG provides for each bird species to create an atlas (table) from this dataset or to make visualization of only a desired species.</p>
+    </div>
+    
+    <div class="row">
+      <div class="col">
+        <div class="card" style="height: calc(100% - 20px);">
+          <h2>Select Data Parameters</h2>
+          <form id="atlasForm">
+            <div class="form-group">
+              <label for="startYear">Start year:</label>
+              <select id="startYear">
+                <option value="1966">1966</option>
+                <option value="1970">1970</option>
+                <option value="1980">1980</option>
+                <option value="1990">1990</option>
+                <option value="2000">2000</option>
+                <option value="2010">2010</option>
+                <option value="2020">2020</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="endYear">End year:</label>
+              <select id="endYear">
+                <option value="2023">2023</option>
+                <option value="2020">2020</option>
+                <option value="2010">2010</option>
+                <option value="2000">2000</option>
+                <option value="1990">1990</option>
+                <option value="1980">1980</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Geographic Area:</label>
+              
+              <div class="radio-group">
+                <input type="radio" id="bcr" name="area" value="bcr" checked>
+                <label for="bcr" class="radio-label">BCR (Bird Conservation Regions)</label>
+              </div>
+              
+              <div class="radio-group">
+                <input type="radio" id="lcc" name="area" value="lcc">
+                <label for="lcc" class="radio-label">LCC (Landscape Conservation Cooperatives)</label>
+              </div>
+              
+              <div class="radio-group">
+                <input type="radio" id="usa" name="area" value="usa">
+                <label for="usa" class="radio-label">USA</label>
+              </div>
+              
+              <div class="radio-group">
+                <input type="radio" id="canada" name="area" value="canada">
+                <label for="canada" class="radio-label">Canada</label>
+              </div>
+              
+              <div class="radio-group">
+                <input type="radio" id="sage" name="area" value="sage">
+                <label for="sage" class="radio-label">Greater Sage-Grouse habitat</label>
+              </div>
+              
+              <div class="radio-group">
+                <input type="radio" id="custom" name="area" value="custom">
+                <label for="custom" class="radio-label">Custom Shapefile</label>
+              </div>
+            </div>
+            
+            <button type="submit">Click ✓</button>
+          </form>
+        </div>
+      </div>
+      
+      <div class="col">
+        <div class="card" style="height: calc(100% - 20px);">
+          <h2>Map Viewer</h2>
+          <div class="map-container">
+            <div class="map-attribution">Leaflet | Data by OpenStreetMap, under ODbL</div>
+          </div>
+          
+          <div class="result-button">
+            <button id="generateResults">Click to get results!</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2 class="text-center">The Modules of the Bird Atlas Generator</h2>
+      <div class="modules-diagram">
+        <div class="center-atlas">Atlas 4</div>
+        <div class="module-node primary-node module-1">Data Sources</div>
+        <div class="module-node secondary-node module-2">Processing Engine</div>
+        <div class="module-node tertiary-node module-3">Analysis Tools</div>
+        <div class="module-node secondary-node module-4">Visualization</div>
+        <div class="module-node primary-node module-5">Export Manager</div>
+        <div class="module-node tertiary-node module-6">Data Storage</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Year validation
+    document.getElementById('startYear').addEventListener('change', function() {
+      const startYear = parseInt(this.value);
+      const endYearSelect = document.getElementById('endYear');
+      const endYearOptions = endYearSelect.options;
+      
+      // Remove options where the year is less than startYear
+      for(let i = endYearOptions.length - 1; i >= 0; i--) {
+        if(parseInt(endYearOptions[i].value) < startYear) {
+          endYearSelect.remove(i);
+        }
+      }
+      
+      // If we don't have any options left, or we need to add more options
+      if(endYearOptions.length === 0) {
+        for(let year = startYear; year <= 2023; year++) {
+          const option = document.createElement('option');
+          option.value = year;
+          option.textContent = year;
+          endYearSelect.appendChild(option);
+        }
+      }
+    });
+    
+    // Form submission handler
+    document.getElementById('atlasForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const startYear = document.getElementById('startYear').value;
+      const endYear = document.getElementById('endYear').value;
+      const selectedArea = document.querySelector('input[name="area"]:checked').value;
+      
+      alert(`Map will be updated for ${selectedArea} from ${startYear} to ${endYear}`);
+      
+      // Enable the results button
+      document.getElementById('generateResults').disabled = false;
+    });
+
+    // Results button handler
+    document.getElementById('generateResults').addEventListener('click', function() {
+      const startYear = document.getElementById('startYear').value;
+      const endYear = document.getElementById('endYear').value;
+      const selectedArea = document.querySelector('input[name="area"]:checked').value;
+      
+      alert(`Bird Atlas will be generated for ${selectedArea} from ${startYear} to ${endYear}`);
+    });
+  </script>
+</body>
+</html> 

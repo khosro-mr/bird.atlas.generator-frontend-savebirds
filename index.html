@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SaveBirds.app Bird Atlas Generator (BAG)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Arial', sans-serif;
+        background-color: #f8fbff;
+        position: relative;
+        z-index: 1;
+        overflow-x: hidden;
+      }
+
+      .container {
+        position: relative;
+        z-index: 5;
+        background-color: #f8fbff;
+        overflow: hidden;
+      }
+
+      .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        height: 100%;
+        margin-bottom: 20px;
+        border: 1px solid #e0e6ef;
+        background-color: white;
+      }
+
+      .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+      }
+
+      #map-container {
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        height: 400px;
+        background-color: #d6e6f5;
+      }
+
+      .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+      }
+
+      .btn-warning {
+        background-color: #f0ad4e;
+        border-color: #f0ad4e;
+      }
+
+      .form-select, .form-check-input {
+        border-color: #ced4da;
+      }
+
+      .modules-diagram {
+        height: auto;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 20px;
+      }
+
+      .result-button {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .year-label {
+        font-weight: 500;
+        color: #495057;
+      }
+      
+      /* Fix for overlapping content */
+      section {
+        position: relative;
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container py-4">
+      <!-- Explanation Section -->
+      <section class="mb-4">
+        <h1 class="text-center fw-bold mb-3">Bird Atlas Generator (BAG)</h1>
+        <div class="lead">
+          <p>Here is the first publicly available comprehensive Bird Atlas Generator (BAG) based on the North American Breeding Bird Survey data. It has been developed at <i>in-situ</i> mediation for conservation practitioners and the bird-aware. BAG assists bird research communities with powerful tools for generating spatially and temporally explicit visualizations of bird population trends.</p>
+          <p>As input, SaveBirds receives the year interval and a map in shapefile (.shp) format. Then SaveBirds provides the user with a zip file that contains hundreds of CSV files, each related to one species, where each CSV contains the modeled species trend in the year interval across specified shapefile geometry defined areas. Currently BAG has only <i>geo-modeled</i> files that were related to the BCR regions of North America. This is why the default geographic area is BCR (Bird Conservation Region).</p>
+          <p>For each species, the BAG creates a Minimum Convex Polygon (MCP) for the routes in which the selected bird species has been seen in the year interval across North America. Then the BAG overlaps the MCP on a raster. By default, we make the cell size of the raster 25 miles x 25 miles for roughly corresponded to the route span of the BBS dataset (nearly 25 miles of roadway). In the overlap step, the BAG provides for each bird species to create an atlas (table) from this dataset or to make visualization of only a desired species.</p>
+        </div>
+      </section>
+
+      <div class="row">
+        <!-- Form Inputs Section -->
+        <section class="col-md-4 mb-4">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Select Data Parameters</h5>
+              <form id="atlasForm">
+                <!-- Year Selection -->
+                <div class="mb-3">
+                  <label for="startYear" class="form-label year-label">Start year:</label>
+                  <select id="startYear" class="form-select">
+                    <!-- Years will be populated by JavaScript -->
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label for="endYear" class="form-label year-label">End year:</label>
+                  <select id="endYear" class="form-select">
+                    <!-- Years will be populated by JavaScript -->
+                  </select>
+                </div>
+
+                <!-- Geographic Area Selection -->
+                <div class="mb-3">
+                  <label class="form-label year-label">Geographic Area:</label>
+                  <div class="d-flex flex-column gap-2" id="geoAreaOptions">
+                    <!-- Radio buttons will be populated by JavaScript -->
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-success d-flex align-items-center" id="submitBtn">
+                  <span>Click</span>
+                  <i class="ms-2">✓</i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Map Viewer Section -->
+        <section class="col-md-8 mb-4">
+          <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title mb-3">Map Viewer</h5>
+              <div id="map-container" class="flex-grow-1"></div>
+              <div class="result-button">
+                <button 
+                  class="btn btn-success d-flex align-items-center mx-auto" 
+                  id="generateResultsBtn"
+                  disabled
+                >
+                  <span>Click to get results!</span>
+                </button>
+              </div>
+              <div class="mt-2 text-end small text-muted">
+                Leaflet | Data by OpenStreetMap, under ODbL
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Modules Diagram Section -->
+      <div class="row">
+        <section class="col-12">
+          <div class="card mb-4" style="position: relative; z-index: 10; background-color: white;">
+            <h2 class="text-center">The Modules of the Bird Atlas Generator</h2>
+            <div class="modules-diagram" style="text-align: center; padding: 20px; position: relative; z-index: 10; background-color: white;">
+              <img src="images/Bird-Atlas-Generator-4.png" alt="Bird Atlas Generator Model" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            </div>
+            <div class="text-center mt-3">
+              <p>The Model of the Bird Atlas Generator</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+      // Initialize the form and map
+      document.addEventListener('DOMContentLoaded', function() {
+        // Current year
+        const currentYear = new Date().getFullYear();
+        let startYear = 1966;
+        let endYear = currentYear;
+        let geographicArea = 'BCR';
+        let map = null;
+        let mapReady = false;
+
+        // Populate year dropdowns
+        const startYearSelect = document.getElementById('startYear');
+        const endYearSelect = document.getElementById('endYear');
+        const geoAreaOptions = document.getElementById('geoAreaOptions');
+        const generateResultsBtn = document.getElementById('generateResultsBtn');
+        const atlasForm = document.getElementById('atlasForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Populate years
+        for (let year = 1966; year <= currentYear; year++) {
+          const startOption = document.createElement('option');
+          startOption.value = year;
+          startOption.textContent = year;
+          startYearSelect.appendChild(startOption);
+
+          const endOption = document.createElement('option');
+          endOption.value = year;
+          endOption.textContent = year;
+          endYearSelect.appendChild(endOption);
+        }
+
+        // Set default values
+        startYearSelect.value = 1966;
+        endYearSelect.value = currentYear;
+
+        // Populate geographic area options
+        const geoAreas = [
+          'BCR (Bird Conservation Regions)',
+          'LCC (Landscape Conservation Cooperatives)',
+          'USA',
+          'Canada', 
+          'Greater Sage-Grouse habitat', 
+          'Custom Shapefile'
+        ];
+
+        geoAreas.forEach((area, index) => {
+          const div = document.createElement('div');
+          div.className = 'form-check';
+          
+          const input = document.createElement('input');
+          input.className = 'form-check-input';
+          input.type = 'radio';
+          input.id = `geoArea${index}`;
+          input.value = area.split(' ')[0]; // Take first word as value
+          input.name = 'geoAreaRadio';
+          if (area.startsWith('BCR')) input.checked = true;
+          
+          const label = document.createElement('label');
+          label.className = 'form-check-label';
+          label.htmlFor = `geoArea${index}`;
+          label.textContent = area;
+          
+          div.appendChild(input);
+          div.appendChild(label);
+          geoAreaOptions.appendChild(div);
+
+          // Add event listener
+          input.addEventListener('change', function() {
+            geographicArea = this.value;
+            updateMapBoundaries();
+          });
+        });
+
+        // Initialize map
+        function initMap() {
+          const mapContainer = document.getElementById('map-container');
+          
+          // Create map with light blue background
+          map = L.map(mapContainer, {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 1,
+            worldCopyJump: true
+          });
+          
+          // Add OpenStreetMap tile layer with custom style
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            opacity: 0.7 // Make tiles semi-transparent
+          }).addTo(map);
+          
+          // Add default boundaries based on geographic area
+          updateMapBoundaries();
+          
+          mapReady = true;
+          generateResultsBtn.removeAttribute('disabled');
+        }
+
+        // Mock boundaries based on selection
+        const mockBoundaries = {
+          'BCR': [
+            [47.116386, -122.846833],
+            [42.891308, -112.935883],
+            [35.358591, -115.559692],
+            [42.152981, -123.481079]
+          ],
+          'LCC': [
+            [48.164514, -124.537236],
+            [41.810994, -114.034072],
+            [36.989983, -117.139156],
+            [44.002482, -124.213824]
+          ],
+          'USA': [
+            [49.384358, -124.733269],
+            [49.384358, -66.949895],
+            [25.837377, -66.949895],
+            [25.837377, -124.733269]
+          ],
+          'Canada': [
+            [69.768712, -140.976195],
+            [69.768712, -52.643195],
+            [41.679865, -52.643195],
+            [41.679865, -140.976195]
+          ],
+          'Greater': [
+            [47.762179, -119.310884],
+            [38.411646, -108.744478],
+            [35.978005, -116.136080],
+            [43.777152, -121.112642]
+          ],
+          'Custom': [
+            [45.000000, -110.000000],
+            [40.000000, -100.000000],
+            [35.000000, -105.000000],
+            [38.000000, -115.000000]
+          ]
+        };
+
+        // Update map boundaries
+        function updateMapBoundaries() {
+          if (!map) return;
+          
+          // Clear existing boundaries
+          map.eachLayer(layer => {
+            if (layer instanceof L.Polygon) {
+              map.removeLayer(layer);
+            }
+          });
+          
+          // Get the first word of the selection to match our boundary keys
+          const areaKey = geographicArea.split(' ')[0];
+          
+          // Add polygon to map
+          if (mockBoundaries[areaKey]) {
+            L.polygon(mockBoundaries[areaKey], {
+              color: '#28a745',
+              fillColor: '#28a745',
+              fillOpacity: 0.2,
+              weight: 2
+            }).addTo(map);
+            
+            // Fit map to boundary
+            map.fitBounds(mockBoundaries[areaKey]);
+          }
+        }
+        
+        // Initialize map
+        initMap();
+        
+        // Form submission handler
+        atlasForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Update values from form
+          startYear = parseInt(startYearSelect.value);
+          endYear = parseInt(endYearSelect.value);
+          
+          // Validate years
+          if (endYear < startYear) {
+            alert('End year must be greater than or equal to start year!');
+            return;
+          }
+          
+          // Update map with new boundaries
+          updateMapBoundaries();
+          
+          // Enable results button
+          generateResultsBtn.removeAttribute('disabled');
+        });
+        
+        // Results button handler
+        generateResultsBtn.addEventListener('click', function() {
+          // In a real application, this would trigger an API call
+          alert(`Bird Atlas will be generated for ${geographicArea} region from ${startYear} to ${endYear}`);
+        });
+        
+        // Year selection change handlers
+        startYearSelect.addEventListener('change', function() {
+          // Filter end year options
+          const selectedStartYear = parseInt(this.value);
+          
+          // Clear existing options
+          while (endYearSelect.options.length > 0) {
+            endYearSelect.remove(0);
+          }
+          
+          // Add new options
+          for (let year = selectedStartYear; year <= currentYear; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            endYearSelect.appendChild(option);
+          }
+          
+          // Update end year if needed
+          if (endYear < selectedStartYear) {
+            endYear = selectedStartYear;
+          }
+          endYearSelect.value = endYear;
+        });
+      });
+    </script>
+  </body>
+</html> 
